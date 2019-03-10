@@ -12,18 +12,34 @@ export default class GraphWidget extends React.Component {
     this.rectWidth = 50;
     this.rectX = 0;
     this.state = {
-      dataNames: [["value_1", true], ["value_2", false]]
+      dataNames: [["value_1", true, "red"], ["value_2", false, "green"]]
     };
   }
 
-  handleToggleCheckbox = ({ target }) =>
-    this.setState({ dataNames: this.state.dataNames.map(name => {}) });
+  handleToggleCheckbox = ({
+    target: {
+      dataset: { name }
+    }
+  }) =>
+    this.setState({
+      dataNames: this.state.dataNames.map(([dataName, value, color]) => [
+        dataName,
+        name === dataName ? !value : value,
+        color
+      ])
+    });
 
   render() {
     return (
       <div style={{ height: this.height }} className="graph-widget">
-        <GraphWidgetControll data={this.data} />
-        <GraphCheckboxes dataNames={this.state.dataNames} />
+        <GraphWidgetControll
+          data={this.data}
+          dataNames={this.state.dataNames}
+        />
+        <GraphCheckboxes
+          onClick={this.handleToggleCheckbox}
+          dataNames={this.state.dataNames}
+        />
       </div>
     );
   }

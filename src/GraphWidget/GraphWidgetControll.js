@@ -1,13 +1,10 @@
 import React from "react";
+import "./GraphWidgetControll.css";
 
 export default class GraphWidgetControll extends React.Component {
   constructor(props) {
     super();
     this.data = props.data;
-    this.maxValue = Math.max(
-      Math.max(...this.data.map(el => el.value_1)),
-      Math.max(...this.data.map(el => el.value_2))
-    );
     this.height = 50;
     this.width = 414;
     this.rectWidth = 50;
@@ -31,6 +28,12 @@ export default class GraphWidgetControll extends React.Component {
   };
 
   render() {
+    const { dataNames } = this.props;
+    const maxValue = Math.max(
+      ...dataNames
+        .filter(([_, active]) => active)
+        .map(([name]) => Math.max(...this.data.map(el => el[name])))
+    );
     const interval = this.width / this.data.length;
     return (
       <div className="graph-widget-controll">
@@ -39,22 +42,20 @@ export default class GraphWidgetControll extends React.Component {
           onTouchMove={this.handlerTouchMoveReact}
           width={this.width}
         >
-          <Poliline
-            interval={interval}
-            data={this.data}
-            maxValue={this.maxValue}
-            height={this.height}
-            name="value_1"
-            color="red"
-          />
-          <Poliline
-            interval={interval}
-            data={this.data}
-            maxValue={this.maxValue}
-            height={this.height}
-            name="value_2"
-            color="green"
-          />
+          {dataNames
+            .filter(([_, active]) => active)
+            .map(([name, _, color]) => (
+              <Poliline
+                key={name}
+                interval={interval}
+                data={this.data}
+                maxValue={maxValue}
+                height={this.height}
+                name={name}
+                color={color}
+              />
+            ))}
+
           <Rect
             posX={this.state.rectX}
             width={this.rectWidth}
@@ -67,17 +68,91 @@ export default class GraphWidgetControll extends React.Component {
   }
 }
 
-function Poliline({ data, name, interval, color, maxValue, height }) {
-  return (
-    <polyline
-      points={data
-        .map((el, i) => `${i * interval},${el[name] / (maxValue / height)}`)
-        .join(" ")}
-      fill="none"
-      stroke={color}
-      strokeWidth="2"
-    />
-  );
+class Poliline extends React.Component {
+  constructor({ data, name, interval, color, maxValue, height }) {
+    super();
+    this.state = {
+      data,
+      name,
+      interval,
+      color,
+      maxValue,
+      height,
+      isAnimate: false
+    };
+    this.renderCounter = 0;
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    if (
+      nextProps.maxValue !== this.state.maxValue &&
+      this.state.isAnimate === false
+    ) {
+      this.setState(
+        { isAnimate: true, prevState: JSON.parse(JSON.stringify(this.state)) },
+        () => {
+          console.log(this.animate);
+          this.animate.beginElement();
+        }
+      );
+      return true;
+    }
+    return false;
+  }
+
+  render() {
+    const {
+      data,
+      name,
+      interval,
+      color,
+      maxValue,
+      height,
+      isAnimate
+    } = this.state;
+    this.renderCounter += 1;
+    console.log(name, this.renderCounter);
+    return (
+      <React.Fragment>
+        <polyline
+          className="poliline-animation"
+          fill="none"
+          stroke={color}
+          strokeWidth="2"
+          points={
+            isAnimate
+              ? this.state.prevState.data
+              : data
+                  .map(
+                    (el, i) =>
+                      `${i * interval},${el[name] / (maxValue / height)}`
+                  )
+                  .join(" ")
+          }
+        >
+          {isAnimate ? (
+            <animate
+              attributeName="points"
+              dur="500ms"
+              ref={node => (this.animate = node)}
+              from={this.state.prevState.data
+                .map(
+                  (el, i) =>
+                    `${i * interval},${el[name] /
+                      (this.state.prevState.maxValue / height)}`
+                )
+                .join(" ")}
+              to={data
+                .map(
+                  (el, i) => `${i * interval},${el[name] / (maxValue / height)}`
+                )
+                .join(" ")}
+            />
+          ) : null}
+        </polyline>
+      </React.Fragment>
+    );
+  }
 }
 
 function Rect({ posX, width, height, color }) {
